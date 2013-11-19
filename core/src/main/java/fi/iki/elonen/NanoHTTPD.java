@@ -136,12 +136,12 @@ public abstract class NanoHTTPD {
    /**
     * Creates an SSLSocketFactory for HTTPS.
     * 
-    * Pass a .jks resource with your certificate and passphrase
+    * Pass a KeyStore resource with your certificate and passphrase
     */
    public static SSLServerSocketFactory makeSSLSocketFactory(String keyAndTrustStoreClasspathPath, char[] passphrase) throws IOException {
       SSLServerSocketFactory res = null;
       try {
-         KeyStore keystore = KeyStore.getInstance("JKS");
+         KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
          InputStream keystoreStream = NanoHTTPD.class.getResourceAsStream(keyAndTrustStoreClasspathPath);
          keystore.load(keystoreStream, passphrase);
          TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
@@ -150,6 +150,26 @@ public abstract class NanoHTTPD {
          keyManagerFactory.init(keystore, passphrase);
          SSLContext ctx = SSLContext.getInstance("TLS");
          ctx.init(keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), null);
+         res = ctx.getServerSocketFactory();
+      } catch (Exception e) {
+         throw new IOException(e);
+      }
+      return res;
+   }
+   
+   /**
+    * Creates an SSLSocketFactory for HTTPS.
+    *
+    * Pass a loaded KeyStore and a loaded KeyManagerFactory.
+    * These objects must properly loaded/initialized by the caller.
+    */
+   public static SSLServerSocketFactory makeSSLSocketFactory(KeyStore loadedKeyStore, KeyManagerFactory loadedKeyFactory) throws IOException {
+      SSLServerSocketFactory res = null;
+      try {
+         TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+         trustManagerFactory.init(loadedKeyStore);
+         SSLContext ctx = SSLContext.getInstance("TLS");
+         ctx.init(loadedKeyFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), null);
          res = ctx.getServerSocketFactory();
       } catch (Exception e) {
          throw new IOException(e);
